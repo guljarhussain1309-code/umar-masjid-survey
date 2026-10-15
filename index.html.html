@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>उमर मस्जिद - सर्वे डेटा एंट्री सिस्टम</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@500;600;700;800&display=swap');
+        body { font-family: 'Hind Siliguri', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col justify-between">
+
+    <!-- Security Login Overlay -->
+    <div id="pinOverlay" class="fixed inset-0 bg-slate-950 bg-opacity-95 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 max-w-md w-full text-center border-4 border-emerald-600">
+            <div class="w-20 h-20 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-inner">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-2">सुरक्षा सत्यापन (Security Login)</h2>
+            <p class="text-base text-slate-600 mb-6 font-semibold">लॉगिन पासवर्ड दर्ज करें। ऑपरेटर नीचे सीधा फॉर्म भरें।</p>
+            
+            <input type="password" id="entryPasswordInput" placeholder="लॉगिन पासवर्ड दर्ज करें" class="w-full text-center text-xl font-bold px-4 py-3 border-4 border-slate-300 rounded-2xl focus:border-emerald-600 focus:outline-none mb-4 shadow-sm">
+            
+            <div class="space-y-3">
+                <button onclick="checkPassword(true)" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg active:scale-95 text-lg">
+                    <i class="fas fa-user-shield mr-2"></i> एडमिन लॉगिन (डैशबोर्ड + रिकॉर्ड्स)
+                </button>
+                <button onclick="checkPassword(false)" class="w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 rounded-2xl transition-all shadow-md active:scale-95 text-base">
+                    <i class="fas fa-user-edit mr-2"></i> ऑपरेटर मोड (केवल फॉर्म भरें)
+                </button>
+            </div>
+            <p id="pinErrorMsg" class="text-red-600 text-sm mt-3 hidden font-extrabold"></p>
+        </div>
+    </div>
+
+    <div>
+        <!-- Navigation Header -->
+        <header class="bg-emerald-900 text-white shadow-xl sticky top-0 z-40 border-b-4 border-emerald-600">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-mosque text-3xl text-emerald-300"></i>
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-black tracking-wide">उमर मस्जिद Survey Management</h1>
+                        <p class="text-xs text-emerald-300 font-bold tracking-wider">Created by Aakib</p>
+                    </div>
+                </div>
+                <div id="navButtons" class="flex flex-wrap items-center gap-2">
+                    <button onclick="switchTab('dashboard')" class="admin-only px-4 py-2 rounded-xl text-base bg-emerald-800 hover:bg-emerald-700 font-bold transition flex items-center shadow border border-emerald-600"><i class="fas fa-chart-pie mr-2 text-emerald-300"></i> डैशबोर्ड</button>
+                    <button onclick="switchTab('survey')" class="px-4 py-2 rounded-xl text-base bg-emerald-800 hover:bg-emerald-700 font-bold transition flex items-center shadow border border-emerald-600"><i class="fas fa-plus-circle mr-2 text-emerald-300"></i> नया फॉर्म</button>
+                    <button onclick="requestMasterAccess('records')" class="admin-only px-4 py-2 rounded-xl text-base bg-emerald-800 hover:bg-emerald-700 font-bold transition flex items-center shadow border border-emerald-600"><i class="fas fa-database mr-2 text-emerald-300"></i> रिकॉर्ड्स</button>
+                    <button onclick="requestMasterAccess('backup')" class="admin-only px-4 py-2 rounded-xl text-base bg-emerald-800 hover:bg-emerald-700 font-bold transition flex items-center shadow border border-emerald-600"><i class="fas fa-cog mr-2 text-emerald-300"></i> कनेक्ट</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Container -->
+        <main class="max-w-7xl mx-auto px-3 sm:px-6 py-6 space-y-6">
+
+            <!-- DASHBOARD TAB -->
+            <section id="tab-dashboard" class="tab-content space-y-6 hidden">
+                <div class="flex justify-between items-center bg-white text-slate-900 p-5 rounded-2xl shadow-md border-l-8 border-emerald-600 border-2 border-slate-300">
+                    <div>
+                        <h2 class="text-2xl sm:text-3xl font-black text-emerald-800">कॉलोनी कुल सारांश (Live Statistics)</h2>
+                        <p class="text-base text-slate-600 font-semibold mt-1">Real-time and updated data of all circles and families</p>
+                    </div>
+                    <button onclick="renderDashboard()" class="px-4 py-2.5 bg-emerald-700 text-white rounded-xl text-base font-extrabold hover:bg-emerald-800 transition shadow-md flex items-center"><i class="fas fa-sync-alt mr-2"></i> रिफ्रेश</button>
+                </div>
+
+                <!-- Primary Metrics Grid -->
+                <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div class="bg-gradient-to-br from-emerald-600 to-emerald-800 text-white p-5 rounded-2xl shadow-lg border-2 border-emerald-400 flex flex-col justify-between">
+                        <p class="text-sm sm:text-base font-extrabold text-emerald-100 uppercase tracking-wide">कुल परिवार</p>
+                        <p id="dashTotalFamilies" class="text-4xl sm:text-5xl font-black text-white mt-2">0</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-5 rounded-2xl shadow-lg border-2 border-blue-400 flex flex-col justify-between">
+                        <p class="text-sm sm:text-base font-extrabold text-blue-100 uppercase tracking-wide">कुल सदस्य</p>
+                        <p id="dashTotalMembers" class="text-4xl sm:text-5xl font-black text-white mt-2">0</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-amber-600 to-amber-800 text-white p-5 rounded-2xl shadow-lg border-2 border-amber-400 flex flex-col justify-between">
+                        <p class="text-sm sm:text-base font-extrabold text-amber-100 uppercase tracking-wide">आलिम / हाफिज़</p>
+                        <p id="dashAalimHafiz" class="text-3xl sm:text-4xl font-black text-white mt-2">0 / 0</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-purple-600 to-purple-800 text-white p-5 rounded-2xl shadow-lg border-2 border-purple-400 flex flex-col justify-between">
+                        <p class="text-sm sm:text-base font-extrabold text-purple-100 uppercase tracking-wide">घर में तालीम</p>
+                        <p id="dashTaaleemHomes" class="text-4xl sm:text-5xl font-black text-white mt-2">0</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-teal-600 to-teal-800 text-white p-5 rounded-2xl shadow-lg border-2 border-teal-400 col-span-2 lg:col-span-1 flex flex-col justify-between">
+                        <p class="text-sm sm:text-base font-extrabold text-teal-100 uppercase tracking-wide">5 आमाल के साथ</p>
+                        <p id="dashAamalHomes" class="text-4xl sm:text-5xl font-black text-white mt-2">0</p>
+                    </div>
+                </div>
+
+                <!-- Detailed Tabligh Waqt Breakdown Grid -->
+                <div class="bg-white p-6 rounded-2xl shadow-md border-2 border-slate-300 space-y-4">
+                    <h3 class="text-xl sm:text-2xl font-black text-slate-900 pb-3 border-b-2 border-slate-200 flex items-center">
+                        <i class="fas fa-clock text-emerald-700 mr-3 text-2xl"></i> अल्लाह के रास्ते में वक़्त लगाने वाले व्यक्ति (Unique Persons Count)
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="tablighGrid"></div>
+                </div>
+            </section>
+
+            <!-- SURVEY FORM TAB -->
+            <section id="tab-survey" class="tab-content">
+                <form id="surveyForm" onsubmit="handleFormSubmit(event)" class="bg-white rounded-2xl shadow-lg border-2 border-slate-300 p-6 sm:p-8 space-y-6">
+                    <div class="flex justify-between items-center border-b-2 pb-4">
+                        <h2 class="text-2xl font-black text-emerald-900 flex items-center">
+                            <i class="fas fa-file-alt mr-3 text-emerald-700"></i> नया सर्वे फॉर्म भरें
+                        </h2>
+                        <span class="text-sm bg-emerald-100 text-emerald-900 font-black px-4 py-1.5 rounded-full border border-emerald-300">सर्वे डेटा एंट्री</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div>
+                            <label class="block text-base font-extrabold text-slate-900 mb-1">हल्क़ा नंबर *</label>
+                            <select id="halka" required class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold bg-slate-50">
+                                <option value="">हल्क़ा चुनें...</option>
+                                <option value="हल्क़ा 1">हल्क़ा 1 (असलम भाई से पहले वाली गली से गोल चक्कर की आखिरी गली तक और मस्जिद के सामने की 3-4 गलियां)</option>
+                                <option value="हल्क़ा 2">हल्क़ा 2 (आस मोहम्मद वाली गली से आखिरी तक सारी गलियां और दोनों तरफ की 20 फीटा गलियां)</option>
+                                <option value="हल्क़ा 3">हल्क़ा 3 (मकबूल भाई वाली गली, पीर वाली गली से लेकर सिकंदरपुर की जड़ तक)</option>
+                                <option value="हल्क़ा 4">हल्क़ा 4 (मस्जिद के छोटे गेट की गली से मुस्लिम तक, शकील की, हाफिज दाऊद, मजनू भाई, यामीन भाई वाली, बरेली मस्जिद वाली गली से बड़े गेट की गली तक)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-base font-extrabold text-slate-900 mb-1">गली का नाम / निशान *</label>
+                            <input type="text" id="gali" placeholder="उदा. गली का नाम" required class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold bg-slate-50">
+                        </div>
+                        <div>
+                            <label class="block text-base font-extrabold text-slate-900 mb-1">घर के मुखिया का नाम *</label>
+                            <input type="text" id="headName" placeholder="नाम लिखें" required class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold bg-slate-50">
+                        </div>
+                        <div>
+                            <label class="block text-base font-extrabold text-slate-900 mb-1">मुखिया का मोबाइल नंबर</label>
+                            <input type="tel" id="headMobile" placeholder="10-अंकीय नंबर" class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold bg-slate-50">
+                        </div>
+                        <div>
+                            <label class="block text-base font-extrabold text-slate-900 mb-1">मसलक *</label>
+                            <select id="maslak" onchange="toggleMaslakOther(this.value)" required class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold bg-slate-50">
+                                <option value="">मसलक चुनें...</option>
+                                <option value="देवबंदी">देवबंदी</option>
+                                <option value="बरेली (बरेलवी)">बरेली (बरेलवी)</option>
+                                <option value="अहले हदीस">अहले हदीस</option>
+                                <option value="वहाबी">वहाबी</option>
+                                <option value="अन्य">अन्य</option>
+                            </select>
+                            <input type="text" id="maslakOther" placeholder="अन्य मसलक यहाँ लिखें" class="mt-2 w-full px-4 py-2 border-2 border-slate-300 rounded-xl text-base font-bold hidden bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-base font-extrabold text-slate-900 mb-1">बिरादरी (Cast) *</label>
+                            <select id="biradari" onchange="handleBiradariChange(this.value)" required class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold bg-slate-50">
+                                <option value="">बिरादरी चुनें...</option>
+                                <option value="सैयद">सैयद</option>
+                                <option value="शेख">शेख</option>
+                                <option value="पठान">पठान</option>
+                                <option value="मुगल">मुगल</option>
+                                <option value="खानजादा">खानजादा</option>
+                                <option value="अब्बासी">अब्बासी</option>
+                                <option value="सिद्दीकी">सिद्दीकी</option>
+                                <option value="अलवी">अलवी</option>
+                                <option value="कुरैशी">कुरैशी</option>
+                                <option value="अंसारी">अंसारी</option>
+                                <option value="सलमानी">सलमानी</option>
+                                <option value="तेली">तेली</option>
+                                <option value="हाशमी">हाशमी</option>
+                                <option value="राजपूत">राजपूत</option>
+                                <option value="त्यागी">त्यागी</option>
+                                <option value="मौला जाट">मौला जाट</option>
+                                <option value="मेवाती">मेवाती</option>
+                                <option value="लोहार">लोहार</option>
+                                <option value="बढ़ई">बढ़ई</option>
+                                <option value="सैफी">सैफी</option>
+                                <option value="मंसूरी">मंसूरी</option>
+                                <option value="इदरीसी">इदरीसी</option>
+                                <option value="दर्जी">दर्जी</option>
+                                <option value="रंगरेज">रंगरेज</option>
+                                <option value="मनिहार">मनिहार</option>
+                                <option value="राइन">राइन</option>
+                                <option value="बिस्ती">बिस्ती</option>
+                                <option value="हलवाई">हलवाई</option>
+                                <option value="धोबी">धोबी</option>
+                                <option value="नलबंध">नलबंध</option>
+                                <option value="कुम्हार">कुम्हार</option>
+                                <option value="अन्य">अन्य</option>
+                            </select>
+                            <input type="text" id="biradariOther" placeholder="अन्य बिरादरी यहाँ लिखें" class="mt-2 w-full px-4 py-2 border-2 border-slate-300 rounded-xl text-base font-bold hidden bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-base font-extrabold text-slate-900 mb-1">घर में तालीम होती है?</label>
+                            <select id="gharTaaleem" onchange="toggleAamalOption(this.value)" class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold bg-slate-50">
+                                <option value="नहीं">नहीं होती</option>
+                                <option value="हाँ">हाँ होती है</option>
+                            </select>
+                        </div>
+                        <div id="aamalDiv" class="hidden">
+                            <label class="block text-base font-extrabold text-slate-900 mb-1">5 आमाल के साथ?</label>
+                            <select id="paanchAamal" class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold bg-slate-50">
+                                <option value="नहीं">नहीं (केवल तालीम)</option>
+                                <option value="हाँ">हाँ (5 आमाल के साथ)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-base font-extrabold text-slate-900 mb-1">घर में आलिम / हाफ़िज़ संख्या</label>
+                            <div class="flex space-x-2">
+                                <input type="number" id="aalimCount" min="0" placeholder="आलिम" class="w-1/2 px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold bg-slate-50">
+                                <input type="number" id="hafizCount" min="0" placeholder="हाफ़िज़" class="w-1/2 px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold bg-slate-50">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-100 p-5 rounded-2xl border-2 border-slate-300">
+                        <label class="block text-lg font-black text-slate-900 mb-2">परिवार में कुल कितने सदस्य हैं?</label>
+                        <select id="memberCountSelect" onchange="adjustMembersCount(this.value)" class="px-5 py-3 border-2 border-emerald-600 font-black text-emerald-900 text-lg rounded-xl w-full bg-white max-w-xs">
+                        </select>
+                    </div>
+
+                    <div id="membersContainer" class="space-y-4"></div>
+
+                    <div class="pt-4 flex justify-end">
+                        <button type="submit" class="px-8 py-4 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-2xl shadow-xl transition flex items-center text-xl">
+                            <i class="fas fa-save mr-3"></i> फॉर्म सुरक्षित सेव करें
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- RECORDS TAB -->
+            <section id="tab-records" class="tab-content space-y-4 hidden">
+                <div class="bg-white p-5 rounded-2xl shadow-md border-2 border-slate-300 flex flex-wrap gap-3 justify-between items-center">
+                    <h2 class="text-2xl font-black text-slate-900">सर्वे डेटा रिकॉर्ड्स</h2>
+                    <input type="text" id="searchInput" oninput="filterRecords()" placeholder="नाम, मोबाइल, गली या हल्क़ा खोजें..." class="px-4 py-2.5 border-2 border-slate-300 rounded-xl text-base font-bold w-full sm:w-80">
+                </div>
+                <div class="bg-white rounded-2xl shadow-md border-2 border-slate-300 overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-base">
+                        <thead>
+                            <tr class="bg-slate-900 text-white font-extrabold border-b-2 border-slate-400">
+                                <th class="p-4">हल्क़ा / गली</th>
+                                <th class="p-4">मुखिया नाम</th>
+                                <th class="p-4">मसलक / बिरादरी</th>
+                                <th class="p-4">सदस्य</th>
+                                <th class="p-4">तालीम / आमाल</th>
+                                <th class="p-4 text-right">कार्रवाई</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordsTableBody" class="font-bold"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- BACKUP & CONNECT TAB -->
+            <section id="tab-backup" class="tab-content space-y-6 hidden">
+                <div class="bg-white p-6 rounded-2xl shadow-md border-2 border-slate-300 space-y-4">
+                    <h3 class="text-xl font-black text-emerald-900 flex items-center">
+                        <i class="fas fa-cloud-upload-alt mr-3 text-emerald-700"></i> गूगल शीट लाइव सिंक (Google Sheet Web App URL)
+                    </h3>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input type="url" id="webAppUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold">
+                        <button onclick="saveWebAppUrl()" class="px-6 py-3 bg-emerald-700 text-white font-extrabold rounded-xl text-base hover:bg-emerald-800">URL सुरक्षित करें</button>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-md border-2 border-slate-300 space-y-4">
+                    <h3 class="text-xl font-black text-slate-900 flex items-center"><i class="fas fa-key mr-3 text-slate-700"></i> मास्टर / डिलीट पासवर्ड बदलें</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <input type="password" id="oldMasterPassword" placeholder="पुराना मास्टर पासवर्ड" class="px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold">
+                        <input type="password" id="newMasterPassword" placeholder="नया मास्टर पासवर्ड" class="px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold">
+                        <button onclick="changeMasterPassword()" class="px-6 py-3 bg-slate-900 text-white font-extrabold rounded-xl text-base">पासवर्ड अपडेट करें</button>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-md border-2 border-slate-300 space-y-4">
+                    <h3 class="text-xl font-black text-slate-900 flex items-center"><i class="fas fa-file-download mr-3 text-slate-700"></i> ऑफलाइन JSON बैकअप</h3>
+                    <div class="flex flex-wrap gap-4">
+                        <button onclick="exportJsonBackup()" class="px-6 py-3 bg-blue-700 text-white font-extrabold rounded-xl text-base">JSON बैकअप डाउनलोड करें</button>
+                        <label class="px-6 py-3 bg-slate-700 text-white font-extrabold rounded-xl text-base cursor-pointer">
+                            JSON बैकअप इम्पोर्ट करें
+                            <input type="file" accept=".json" onchange="importJsonBackup(event)" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <footer class="bg-slate-900 text-slate-300 text-center py-4 mt-12 border-t-2 border-slate-700 font-bold text-sm">
+        <p>उमर मस्जिद सर्वे प्रबंधन प्रणाली | Designed & <span class="text-emerald-400 font-black">Created by Aakib</span></p>
+    </footer>
+
+    <script>
+        const APP_STORAGE_KEY = 'colony_survey_data';
+        const APP_LOGIN_PASS_KEY = 'colony_login_password';
+        const APP_MASTER_PASS_KEY = 'colony_master_password';
+        const APP_URL_KEY = 'colony_webapp_url';
+
+        let surveyRecords = [];
+        let currentMembersData = [];
+        const TABLIGH_CATS = [
+            '3 दिन', '10 दिन', '40 दिन', '2 माह', '4 माह', '5 माह', '1 साल',
+            '3 दिन (मस्तूरात)', '10 दिन (मस्तूरात)', '40 दिन (मस्तूरात)', '2 माह (मस्तूरात)'
+        ];
+
+        const CARD_THEMES = [
+            { bg: 'bg-gradient-to-r from-blue-600 to-indigo-700', text: 'text-white', sub: 'text-blue-200' },
+            { bg: 'bg-gradient-to-r from-emerald-600 to-teal-700', text: 'text-white', sub: 'text-emerald-200' },
+            { bg: 'bg-gradient-to-r from-amber-600 to-orange-700', text: 'text-white', sub: 'text-amber-200' },
+            { bg: 'bg-gradient-to-r from-purple-600 to-pink-700', text: 'text-white', sub: 'text-purple-200' },
+            { bg: 'bg-gradient-to-r from-rose-600 to-red-700', text: 'text-white', sub: 'text-rose-200' },
+            { bg: 'bg-gradient-to-r from-cyan-600 to-blue-800', text: 'text-white', sub: 'text-cyan-200' },
+            { bg: 'bg-gradient-to-r from-violet-600 to-purple-800', text: 'text-white', sub: 'text-violet-200' },
+            { bg: 'bg-gradient-to-r from-teal-700 to-emerald-900', text: 'text-white', sub: 'text-teal-200' },
+            { bg: 'bg-gradient-to-r from-indigo-700 to-slate-800', text: 'text-white', sub: 'text-indigo-200' },
+            { bg: 'bg-gradient-to-r from-amber-700 to-yellow-800', text: 'text-white', sub: 'text-amber-200' },
+            { bg: 'bg-gradient-to-r from-fuchsia-700 to-pink-900', text: 'text-white', sub: 'text-fuchsia-200' }
+        ];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadMemberSelectOptions();
+            loadRecords();
+            initWebAppUrl();
+            adjustMembersCount(1);
+        });
+
+        function saveCurrentDataToLocal() {
+            localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(surveyRecords));
+        }
+
+        function loadRecords() {
+            const raw = localStorage.getItem(APP_STORAGE_KEY);
+            surveyRecords = raw ? JSON.parse(raw) : [];
+        }
+
+        function checkPassword(isAdminLogin) {
+            const entered = document.getElementById('entryPasswordInput').value;
+            const savedLoginPass = localStorage.getItem(APP_LOGIN_PASS_KEY) || 'Umarmasjid@2026';
+
+            if (isAdminLogin) {
+                if (entered === savedLoginPass) {
+                    document.getElementById('pinOverlay').classList.add('hidden');
+                    document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+                    renderDashboard();
+                } else {
+                    showPasswordError("गलत लॉगिन पासवर्ड दर्ज किया गया है!");
+                }
+            } else {
+                document.getElementById('pinOverlay').classList.add('hidden');
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+                switchTab('survey');
+            }
+        }
+
+        function showPasswordError(msg) {
+            const err = document.getElementById('pinErrorMsg');
+            err.innerText = msg;
+            err.classList.remove('hidden');
+        }
+
+        // रिकॉर्ड्स या कनेक्ट टैब खोलने के लिए मास्टर पासवर्ड माँगेगा
+        function requestMasterAccess(tabName) {
+            const enteredMaster = prompt("सुरक्षा सत्यापन: इस अनुभाग (Records/Connect) को खोलने के लिए अपना 'मास्टर पासवर्ड' दर्ज करें:");
+            if (enteredMaster === null) return;
+
+            const savedMasterPass = localStorage.getItem(APP_MASTER_PASS_KEY) || 'Adminsecret@2026';
+
+            if (enteredMaster === savedMasterPass) {
+                switchTab(tabName);
+            } else {
+                alert("गलत मास्टर पासवर्ड! आप इस अनुभाग को नहीं खोल सकते।");
+            }
+        }
+
+        function changeMasterPassword() {
+            const oldP = document.getElementById('oldMasterPassword').value;
+            const newP = document.getElementById('newMasterPassword').value;
+            const savedMasterPass = localStorage.getItem(APP_MASTER_PASS_KEY) || 'AdminSecret@2026';
+
+            if (oldP !== savedMasterPass) {
+                alert("पुराना मास्टर पासवर्ड गलत है!");
+                return;
+            }
+            if (!newP || newP.length < 6) {
+                alert("नया मास्टर पासवर्ड कम से कम 6 अक्षरों का होना चाहिए!");
+                return;
+            }
+            localStorage.setItem(APP_MASTER_PASS_KEY, newP);
+            alert("मास्टर पासवर्ड सफलतापूर्वक बदल दिया गया है!");
+            document.getElementById('oldMasterPassword').value = '';
+            document.getElementById('newMasterPassword').value = '';
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            if(tabName === 'dashboard') renderDashboard();
+            if(tabName === 'records') renderRecordsTable();
+        }
+
+        function loadMemberSelectOptions() {
+            const sel = document.getElementById('memberCountSelect');
+            sel.innerHTML = '';
+            for(let i=1; i<=25; i++) {
+                sel.innerHTML += `<option value="${i}">${i} सदस्य</option>`;
+            }
+        }
+
+        function adjustMembersCount(targetCount) {
+            targetCount = parseInt(targetCount);
+            saveCurrentMembersFormState();
+
+            if (targetCount < currentMembersData.length) {
+                if (!confirm(`क्या आप सदस्यों की संख्या घटाकर ${targetCount} करना चाहते हैं? अतिरिक्त डेटा हट जाएगा।`)) {
+                    document.getElementById('memberCountSelect').value = currentMembersData.length;
+                    return;
+                }
+                currentMembersData = currentMembersData.slice(0, targetCount);
+            } else {
+                while(currentMembersData.length < targetCount) {
+                    currentMembersData.push({
+                        name: '', age: '', gender: 'मर्द', maritalStatus: 'अविवाहित', mobile: '',
+                        education: 'पहली से पांचवीं', occupation: 'Private Job', occupationOther: '',
+                        waqtDetails: {}
+                    });
+                }
+            }
+            renderMemberForms();
+        }
+
+        function saveCurrentMembersFormState() {
+            const container = document.getElementById('membersContainer');
+            const cards = container.querySelectorAll('.member-card');
+            cards.forEach((card, idx) => {
+                if(currentMembersData[idx]) {
+                    currentMembersData[idx].name = card.querySelector('.m-name')?.value || '';
+                    currentMembersData[idx].age = card.querySelector('.m-age')?.value || '';
+                    currentMembersData[idx].gender = card.querySelector('.m-gender')?.value || 'मर्द';
+                    currentMembersData[idx].maritalStatus = card.querySelector('.m-marital')?.value || 'अविवाहित';
+                    currentMembersData[idx].mobile = card.querySelector('.m-mobile')?.value || '';
+                    currentMembersData[idx].education = card.querySelector('.m-edu')?.value || '';
+                    currentMembersData[idx].occupation = card.querySelector('.m-occ')?.value || '';
+                    
+                    const waqtData = {};
+                    card.querySelectorAll('.waqt-item-row').forEach(row => {
+                        const cb = row.querySelector('.m-waqt-cb');
+                        const countInput = row.querySelector('.m-waqt-freq');
+                        if(cb && cb.checked) {
+                            waqtData[cb.value] = parseInt(countInput?.value || 1);
+                        }
+                    });
+                    currentMembersData[idx].waqtDetails = waqtData;
+                }
+            });
+        }
+
+        function renderMemberForms() {
+            const container = document.getElementById('membersContainer');
+            container.innerHTML = '';
+
+            currentMembersData.forEach((m, idx) => {
+                let waqtRows = TABLIGH_CATS.map(cat => {
+                    const isChecked = m.waqtDetails && m.waqtDetails[cat] !== undefined;
+                    const freqVal = isChecked ? m.waqtDetails[cat] : 1;
+                    return `
+                        <div class="waqt-item-row flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border-2 border-slate-300 text-sm">
+                            <label class="inline-flex items-center cursor-pointer flex-1 font-bold text-slate-900">
+                                <input type="checkbox" value="${cat}" ${isChecked ? 'checked' : ''} onchange="toggleWaqtFreq(this)" class="m-waqt-cb text-emerald-600 rounded w-4 h-4 mr-2"> 
+                                <span>${cat}</span>
+                            </label>
+                            <div class="flex items-center space-x-1 ${isChecked ? '' : 'hidden'} freq-box">
+                                <span class="text-slate-600 font-extrabold text-xs">बार:</span>
+                                <input type="number" min="1" value="${freqVal}" class="m-waqt-freq w-16 px-2 py-1 border-2 border-emerald-600 rounded-lg text-sm text-center font-black bg-white">
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML += `
+                    <div class="member-card bg-slate-100 p-5 rounded-2xl border-2 border-slate-300 space-y-4">
+                        <h4 class="font-black text-lg text-emerald-900 border-b-2 border-slate-300 pb-2">सदस्य #${idx + 1} विवरण</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                            <input type="text" placeholder="सदस्य नाम *" value="${m.name}" required class="m-name px-4 py-2.5 border-2 border-slate-300 rounded-xl text-base font-bold bg-white">
+                            <input type="number" placeholder="उम्र *" value="${m.age}" required class="m-age px-4 py-2.5 border-2 border-slate-300 rounded-xl text-base font-bold bg-white">
+                            <select class="m-gender px-4 py-2.5 border-2 border-slate-300 rounded-xl text-base font-bold bg-white">
+                                <option value="मर्द" ${m.gender==='मर्द'?'selected':''}>मर्द</option>
+                                <option value="औरत" ${m.gender==='औरत'?'selected':''}>औरत</option>
+                                <option value="अन्य" ${m.gender==='अन्य'?'selected':''}>अन्य</option>
+                            </select>
+                            <select class="m-marital px-4 py-2.5 border-2 border-slate-300 rounded-xl text-base font-bold bg-white">
+                                <option value="अविवाहित" ${m.maritalStatus==='अविवाहित'?'selected':''}>अविवाहित (Single)</option>
+                                <option value="विवाहित" ${m.maritalStatus==='विवाहित'?'selected':''}>विवाहित (Married)</option>
+                                <option value="विधवा/विधुर" ${m.maritalStatus==='विधवा/विधुर'?'selected':''}>विधवा / विधुर</option>
+                            </select>
+                            <input type="tel" placeholder="व्यक्तिगत मोबाइल" value="${m.mobile}" class="m-mobile px-4 py-2.5 border-2 border-slate-300 rounded-xl text-base font-bold bg-white">
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-extrabold text-slate-900 mb-1">शिक्षा</label>
+                                <select class="m-edu w-full px-4 py-2.5 border-2 border-slate-300 rounded-xl text-base font-bold bg-white">
+                                    <option value="अनपढ़" ${m.education==='अनपढ़'?'selected':''}>अनपढ़</option>
+                                    <option value="पहली से पांचवीं" ${m.education==='पहली से पांचवीं'?'selected':''}>पहली से पांचवीं</option>
+                                    <option value="6th-8th" ${m.education==='6th-8th'?'selected':''}>6th-8th</option>
+                                    <option value="9th-10th" ${m.education==='9th-10th'?'selected':''}>9th-10th</option>
+                                    <option value="11th-12th" ${m.education==='11th-12th'?'selected':''}>11th-12th</option>
+                                    <option value="Undergraduate" ${m.education==='Undergraduate'?'selected':''}>Undergraduate</option>
+                                    <option value="Graduate" ${m.education==='Graduate'?'selected':''}>Graduate</option>
+                                    <option value="Postgraduate" ${m.education==='Postgraduate'?'selected':''}>Postgraduate</option>
+                                    <option value="PhD" ${m.education==='PhD'?'selected':''}>PhD</option>
+                                    <option value="Diploma/ITI" ${m.education==='Diploma/ITI'?'selected':''}>Diploma / ITI / Vocational</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-extrabold text-slate-900 mb-1">व्यवसाय (Occupation)</label>
+                                <select class="m-occ w-full px-4 py-2.5 border-2 border-slate-300 rounded-xl text-base font-bold bg-white">
+                                    <option value="Student" ${m.occupation==='Student'?'selected':''}>Student</option>
+                                    <option value="Private Job" ${m.occupation==='Private Job'?'selected':''}>Private Job</option>
+                                    <option value="Government Job" ${m.occupation==='Government Job'?'selected':''}>Government Job</option>
+                                    <option value="Business Owner" ${m.occupation==='Business Owner'?'selected':''}>Business Owner / Self Employed</option>
+                                    <option value="Homemaker" ${m.occupation==='Homemaker'?'selected':''}>Homemaker</option>
+                                    <option value="Unemployed" ${m.occupation==='Unemployed'?'selected':''}>Unemployed</option>
+                                    <option value="Retired" ${m.occupation==='Retired'?'selected':''}>Retired</option>
+                                    <option value="Other" ${m.occupation==='Other'?'selected':''}>Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-extrabold text-slate-900 mb-2">अल्लाह के रास्ते में वक्त लगाया (संख्या दर्ज करें):</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">${waqtRows}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function toggleWaqtFreq(checkbox) {
+            const row = checkbox.closest('.waqt-item-row');
+            const freqBox = row.querySelector('.freq-box');
+            if(checkbox.checked) {
+                freqBox.classList.remove('hidden');
+            } else {
+                freqBox.classList.add('hidden');
+            }
+        }
+
+        function toggleMaslakOther(val) {
+            const othInput = document.getElementById('maslakOther');
+            if(val === 'अन्य') {
+                othInput.classList.remove('hidden');
+                othInput.required = true;
+            } else {
+                othInput.classList.add('hidden');
+                othInput.required = false;
+                othInput.value = '';
+            }
+        }
+
+        function toggleAamalOption(val) {
+            if(val === 'हाँ') document.getElementById('aamalDiv').classList.remove('hidden');
+            else document.getElementById('aamalDiv').classList.add('hidden');
+        }
+
+        function handleBiradariChange(val) {
+            const othInput = document.getElementById('biradariOther');
+            if(val === 'अन्य') {
+                othInput.classList.remove('hidden');
+                othInput.required = true;
+            } else {
+                othInput.classList.add('hidden');
+                othInput.required = false;
+                othInput.value = '';
+            }
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            saveCurrentMembersFormState();
+
+            const maslakVal = document.getElementById('maslak').value === 'अन्य' ? 'अन्य: ' + document.getElementById('maslakOther').value : document.getElementById('maslak').value;
+            const biradariVal = document.getElementById('biradari').value === 'अन्य' ? 'अन्य: ' + document.getElementById('biradariOther').value : document.getElementById('biradari').value;
+
+            const record = {
+                id: Date.now(),
+                halka: document.getElementById('halka').value,
+                gali: document.getElementById('gali').value,
+                headName: document.getElementById('headName').value,
+                headMobile: document.getElementById('headMobile').value,
+                maslak: maslakVal,
+                biradari: biradariVal,
+                gharTaaleem: document.getElementById('gharTaaleem').value,
+                paanchAamal: document.getElementById('paanchAamal').value || 'नहीं',
+                aalimCount: parseInt(document.getElementById('aalimCount').value || 0),
+                hafizCount: parseInt(document.getElementById('hafizCount').value || 0),
+                totalMembers: currentMembersData.length,
+                members: [...currentMembersData]
+            };
+
+            loadRecords();
+            surveyRecords.push(record);
+            saveCurrentDataToLocal();
+
+            const webAppUrl = localStorage.getItem(APP_URL_KEY);
+            if (webAppUrl) {
+                try {
+                    await fetch(webAppUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(record)
+                    });
+                    alert("फॉर्म सफलतापूर्वक आपकी Google Sheet और लोकल ड्राइव में सुरक्षित सेव हो गया है!");
+                } catch (err) {
+                    alert("डेटा लोकल सेव हो गया, Google Sheet सिंक में त्रुटि: " + err);
+                }
+            } else {
+                alert("फॉर्म सफलतापूर्वक सुरक्षित सेव हो गया है!");
+            }
+
+            document.getElementById('surveyForm').reset();
+            currentMembersData = [];
+            adjustMembersCount(1);
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            loadRecords();
+            document.getElementById('dashTotalFamilies').innerText = surveyRecords.length;
+
+            let totalPop = 0, totalAalim = 0, totalHafiz = 0, taaleemCount = 0, aamalCount = 0;
+            let waqtUniquePersons = {};
+            TABLIGH_CATS.forEach(c => waqtUniquePersons[c] = 0);
+
+            surveyRecords.forEach(r => {
+                totalPop += (r.members ? r.members.length : 0);
+                totalAalim += (r.aalimCount || 0);
+                totalHafiz += (r.hafizCount || 0);
+                if(r.gharTaaleem === 'हाँ') taaleemCount++;
+                if(r.paanchAamal === 'हाँ') aamalCount++;
+
+                if(r.members) {
+                    r.members.forEach(m => {
+                        if(m.waqtDetails) {
+                            for(let cat of Object.keys(m.waqtDetails)) {
+                                if(waqtUniquePersons[cat] !== undefined) {
+                                    waqtUniquePersons[cat]++;
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+
+            document.getElementById('dashTotalMembers').innerText = totalPop;
+            document.getElementById('dashAalimHafiz').innerText = `${totalAalim} / ${totalHafiz}`;
+            document.getElementById('dashTaaleemHomes').innerText = taaleemCount;
+            document.getElementById('dashAamalHomes').innerText = aamalCount;
+
+            const grid = document.getElementById('tablighGrid');
+            grid.innerHTML = '';
+            TABLIGH_CATS.forEach((cat, index) => {
+                const theme = CARD_THEMES[index % CARD_THEMES.length];
+                grid.innerHTML += `
+                    <div class="${theme.bg} ${theme.text} p-5 rounded-2xl shadow-lg border-2 border-white/30 flex items-center justify-between">
+                        <div class="text-left">
+                            <p class="text-base font-extrabold ${theme.sub} tracking-wide">${cat}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-4xl font-black">${waqtUniquePersons[cat] || 0} <span class="text-sm font-bold opacity-90">व्यक्ति</span></p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderRecordsTable() {
+            loadRecords();
+            const tbody = document.getElementById('recordsTableBody');
+            tbody.innerHTML = '';
+
+            surveyRecords.forEach((r, idx) => {
+                let memberDetailsHTML = (r.members || []).map((m, mi) => {
+                    let waqtStr = Object.entries(m.waqtDetails || {}).map(([k, v]) => `${k} (${v} बार)`).join(', ');
+                    return `<div class="text-sm border-b border-slate-300 py-1.5 font-bold"><b>${mi+1}. ${m.name}</b> (${m.age} वर्ष, ${m.gender}) - ${m.education}, ${m.occupation} ${waqtStr ? '<br><span class="text-emerald-800 font-black">वक़्त: ' + waqtStr + '</span>' : ''}</div>`;
+                }).join('');
+
+                tbody.innerHTML += `
+                    <tr class="border-b-2 border-slate-200 hover:bg-slate-100">
+                        <td class="p-4"><span class="font-black text-slate-900 text-base">${r.halka}</span><br><span class="text-xs font-bold text-slate-600">${r.gali}</span></td>
+                        <td class="p-4 font-black text-slate-900">${r.headName}<br><span class="text-xs font-bold text-slate-600">मोबाइल: ${r.headMobile || '-'}</span></td>
+                        <td class="p-4 text-sm font-bold text-slate-800">${r.maslak} / ${r.biradari}</td>
+                        <td class="p-4 text-sm font-bold"><span class="font-black text-emerald-800 text-base">${r.totalMembers}</span> सदस्य
+                            <details class="mt-1 cursor-pointer text-blue-700">
+                                <summary class="font-extrabold text-xs">विवरण देखें</summary>
+                                <div class="bg-slate-100 p-3 rounded-xl mt-1 text-slate-900 space-y-1 border border-slate-300">${memberDetailsHTML}</div>
+                            </details>
+                        </td>
+                        <td class="p-4 text-sm font-extrabold">${r.gharTaaleem==='हाँ'?'तालीम '+ (r.paanchAamal==='हाँ'?'(5 आमाल)':''):'नहीं'}</td>
+                        <td class="p-4 text-right">
+                            <button onclick="deleteRecord(${idx})" class="text-red-700 hover:text-red-900 text-sm font-black px-3 py-1.5 rounded-lg bg-red-100 border border-red-300"><i class="fas fa-trash"></i> डिलीट</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // रिकॉर्ड डिलीट करने के लिए भी यही मास्टर पासवर्ड माँगेगा
+        function deleteRecord(idx) {
+            const enteredMaster = prompt("सुरक्षा सत्यापन: इस रिकॉर्ड को डिलीट करने के लिए अपना 'मास्टर पासवर्ड' दर्ज करें:");
+            if (enteredMaster === null) return;
+
+            const savedMasterPass = localStorage.getItem(APP_MASTER_PASS_KEY) || 'AdminSecret@2026';
+
+            if (enteredMaster === savedMasterPass) {
+                if(confirm("क्या आप वाकई इस रिकॉर्ड को डिलीट करना चाहते हैं?")) {
+                    loadRecords();
+                    surveyRecords.splice(idx, 1);
+                    saveCurrentDataToLocal();
+                    renderRecordsTable();
+                    renderDashboard();
+                    alert("रिकॉर्ड सफलतापूर्वक डिलीट कर दिया गया है!");
+                }
+            } else {
+                alert("गलत मास्टर पासवर्ड! रिकॉर्ड डिलीट नहीं किया जा सकता।");
+            }
+        }
+
+        function initWebAppUrl() {
+            const savedUrl = localStorage.getItem(APP_URL_KEY) || '';
+            document.getElementById('webAppUrlInput').value = savedUrl;
+        }
+
+        function saveWebAppUrl() {
+            const url = document.getElementById('webAppUrlInput').value.trim();
+            localStorage.setItem(APP_URL_KEY, url);
+            alert("URL सुरक्षित कर दिया गया है!");
+        }
+
+        function exportJsonBackup() {
+            loadRecords();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(surveyRecords, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `survey_backup_${Date.now()}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        }
+
+        function importJsonBackup(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const imported = JSON.parse(evt.target.result);
+                    if(Array.isArray(imported)) {
+                        surveyRecords = imported;
+                        saveCurrentDataToLocal();
+                        alert("डेटा सफलतापूर्वक इम्पोर्ट हो गया!");
+                        renderDashboard();
+                    }
+                } catch(err) {
+                    alert("त्रुटि: " + err);
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
